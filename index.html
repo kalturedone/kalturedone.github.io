@@ -2,76 +2,81 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Opening Video...</title>
+  <title>YouTube App Link Generator</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <style>
     body {
-      margin: 0;
-      height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #000;
-      color: white;
       font-family: Arial, sans-serif;
-      text-align: center;
+      background: #111;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
     }
     .box {
-      max-width: 300px;
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
     }
-    img {
+    input {
       width: 100%;
-      border-radius: 12px;
-      margin-bottom: 20px;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: none;
     }
     button {
-      padding: 12px 20px;
-      border: none;
+      padding: 10px 15px;
       border-radius: 8px;
+      border: none;
       background: red;
       color: white;
-      font-size: 16px;
       cursor: pointer;
+      margin-top: 10px;
+    }
+    .result {
+      margin-top: 15px;
+      word-break: break-all;
+      font-size: 14px;
     }
   </style>
+</head>
+<body>
+  <div class="box">
+    <h2>YouTube App Link Generator</h2>
+    <input type="text" id="ytLink" placeholder="Paste YouTube link here">
+    <button onclick="generateLink()">Generate Link</button>
+    <div class="result" id="result"></div>
+  </div>
 
   <script>
+    function generateLink() {
+      const input = document.getElementById("ytLink").value;
+      const videoIdMatch = input.match(/(?:v=|youtu\.be\/)([^&]+)/);
+
+      if (!videoIdMatch) {
+        document.getElementById("result").innerText = "Invalid YouTube link.";
+        return;
+      }
+
+      const videoId = videoIdMatch[1];
+      const baseUrl = window.location.origin + window.location.pathname;
+      const finalLink = baseUrl + "?v=" + videoId;
+
+      document.getElementById("result").innerHTML =
+        "Copy this link for Instagram:<br><br>" + finalLink;
+    }
+
+    // Redirect logic if ?v= exists
     const params = new URLSearchParams(window.location.search);
     const videoId = params.get("v");
 
     if (videoId) {
       const youtubeUrl = "https://www.youtube.com/watch?v=" + videoId;
-      const androidIntent = "intent://www.youtube.com/watch?v=" + videoId + "#Intent;package=com.google.android.youtube;scheme=https;end;";
-
-      // Try Android deep link first
-      window.location.href = androidIntent;
-
-      // Fallback to normal YouTube link after short delay
-      setTimeout(function() {
-        window.location.href = youtubeUrl;
-      }, 1500);
-
-      // Add fallback button manually
-      window.onload = function() {
-        document.getElementById("openBtn").onclick = function() {
-          window.location.href = youtubeUrl;
-        };
-        document.getElementById("thumbnail").src = "https://img.youtube.com/vi/" + videoId + "/hqdefault.jpg";
-      };
-
-    } else {
-      document.body.innerHTML = "No video specified.";
+      window.location.replace(youtubeUrl);
     }
   </script>
-
-</head>
-
-<body>
-  <div class="box">
-    <img id="thumbnail" src="" alt="Video Thumbnail">
-    <p>Opening in YouTube App...</p>
-    <button id="openBtn">Tap if it doesn't open</button>
-  </div>
 </body>
 </html>
