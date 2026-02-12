@@ -1,132 +1,204 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Watch on YouTube</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Linker</title>
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --card: #1e1e1e;
+            --text: #ffffff;
+            --accent: #ff0000;
+            --secondary: #aaaaaa;
+        }
 
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #0f0f0f;
-      color: white;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      text-align: center;
-    }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+        }
 
-    .container {
-      max-width: 420px;
-      width: 90%;
-    }
+        .container {
+            width: 90%;
+            max-width: 450px;
+            padding: 20px;
+        }
 
-    img {
-      width: 100%;
-      border-radius: 14px;
-      margin-bottom: 20px;
-    }
+        .hidden { display: none !important; }
 
-    h2 {
-      margin-bottom: 20px;
-      font-weight: 600;
-      font-size: 20px;
-    }
+        /* Generator Styles */
+        h1 { font-size: 1.5rem; margin-bottom: 20px; }
+        input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background: #222;
+            color: white;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+        }
+        button {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 50px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            font-size: 1rem;
+            transition: transform 0.2s;
+        }
+        button:active { transform: scale(0.98); }
+        
+        .result-area {
+            margin-top: 20px;
+            padding: 15px;
+            background: var(--card);
+            border-radius: 8px;
+            word-break: break-all;
+            font-size: 0.9rem;
+        }
 
-    .button {
-      display: inline-block;
-      padding: 14px 22px;
-      font-size: 16px;
-      font-weight: bold;
-      border-radius: 10px;
-      background: #ff0000;
-      color: white;
-      text-decoration: none;
-      margin-bottom: 15px;
-    }
-
-    .small-text {
-      font-size: 13px;
-      color: #bbb;
-      line-height: 1.5;
-      margin-top: 10px;
-    }
-
-    input {
-      width: 100%;
-      padding: 10px;
-      border-radius: 8px;
-      border: none;
-      margin-bottom: 10px;
-    }
-
-    button {
-      padding: 10px 16px;
-      border: none;
-      border-radius: 8px;
-      background: #ff0000;
-      color: white;
-      cursor: pointer;
-    }
-
-    #result {
-      margin-top: 15px;
-      font-size: 14px;
-      word-break: break-all;
-    }
-  </style>
+        /* Viewer Styles */
+        .thumbnail {
+            width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+        }
+        .video-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 25px;
+            line-height: 1.4;
+        }
+        .watch-btn {
+            display: inline-block;
+            text-decoration: none;
+            background: #ffffff;
+            color: #000000;
+            padding: 16px 32px;
+            border-radius: 50px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(255,255,255,0.2);
+        }
+        .copy-hint {
+            margin-top: 20px;
+            color: var(--secondary);
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+    </style>
 </head>
-
 <body>
 
-<div class="container" id="content"></div>
+    <div class="container">
+        <div id="generator" class="hidden">
+            <h1>Link Generator</h1>
+            <input type="text" id="ytUrl" placeholder="Paste YouTube URL here...">
+            <button onclick="generateLink()">Generate Link</button>
+            <div id="result" class="result-area hidden">
+                <p>Your Link:</p>
+                <strong id="newUrl"></strong>
+                <p style="font-size: 0.7rem; color: #888; margin-top: 10px;">(Click to copy)</p>
+            </div>
+        </div>
 
-<script>
-  const params = new URLSearchParams(window.location.search);
-  const videoId = params.get("v");
-  const container = document.getElementById("content");
+        <div id="viewer" class="hidden">
+            <img id="thumb" src="" alt="Thumbnail" class="thumbnail">
+            <div id="title" class="video-title">Loading video details...</div>
+            <a id="appLink" href="" class="watch-btn">Watch in YouTube App</a>
+            <div class="copy-hint" onclick="copyCurrentUrl()">Share this page link</div>
+        </div>
+    </div>
 
-  if (videoId) {
-    const youtubeUrl = "https://www.youtube.com/watch?v=" + videoId;
-    const thumbnail = "https://img.youtube.com/vi/" + videoId + "/hqdefault.jpg";
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const videoId = urlParams.get('v');
 
-    container.innerHTML = `
-      <img src="${thumbnail}" alt="Video Thumbnail">
-      <h2>Watch This Video</h2>
-      <a class="button" href="${youtubeUrl}">Watch in YouTube App</a>
-      <div class="small-text">
-        If you're inside Instagram, tap ⋯ in the top corner<br>
-        then select <b>Open in Browser</b> for best experience.
-      </div>
-    `;
-  } else {
-    container.innerHTML = `
-      <h2>YouTube App Link Generator</h2>
-      <input id="ytLink" type="text" placeholder="Paste YouTube link here">
-      <button onclick="generateLink()">Generate Link</button>
-      <div id="result"></div>
-    `;
-  }
+        const generatorDiv = document.getElementById('generator');
+        const viewerDiv = document.getElementById('viewer');
 
-  function generateLink() {
-    const input = document.getElementById("ytLink").value;
-    const match = input.match(/(?:v=|youtu\\.be\\/)([^&]+)/);
+        if (videoId) {
+            setupViewer(videoId);
+        } else {
+            setupGenerator();
+        }
 
-    if (!match) {
-      document.getElementById("result").innerText = "Invalid YouTube link.";
-      return;
-    }
+        // --- Generator Logic ---
+        function setupGenerator() {
+            generatorDiv.classList.remove('hidden');
+        }
 
-    const id = match[1];
-    const base = window.location.origin + window.location.pathname;
-    const finalLink = base + "?v=" + id;
+        function generateLink() {
+            const input = document.getElementById('ytUrl').value;
+            const idMatch = input.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
+            
+            if (idMatch && idMatch[1]) {
+                const newId = idMatch[1];
+                const cleanBase = window.location.href.split('?')[0];
+                const finalUrl = `${cleanBase}?v=${newId}`;
+                
+                const resultArea = document.getElementById('result');
+                const newUrlElem = document.getElementById('newUrl');
+                
+                resultArea.classList.remove('hidden');
+                newUrlElem.innerText = finalUrl;
+                
+                newUrlElem.onclick = () => {
+                    navigator.clipboard.writeText(finalUrl);
+                    alert("Link copied!");
+                };
+            } else {
+                alert("Please enter a valid YouTube URL");
+            }
+        }
 
-    document.getElementById("result").innerHTML =
-      "Copy this link for Instagram:<br><br>" + finalLink;
-  }
-</script>
+        // --- Viewer Logic ---
+        async function setupViewer(id) {
+            viewerDiv.classList.remove('hidden');
+            
+            // Set basic info immediately
+            const thumbImg = document.getElementById('thumb');
+            const appLink = document.getElementById('appLink');
+            
+            thumbImg.src = `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
+            // Fallback to standard quality if maxres doesn't exist (handled by browser usually, but safe)
+            thumbImg.onerror = () => thumbImg.src = `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+            
+            const youtubeUrl = `https://www.youtube.com/watch?v=${id}`;
+            appLink.href = youtubeUrl;
 
+            // Try to fetch title via oEmbed
+            try {
+                const response = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`);
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('title').innerText = data.title;
+                    document.title = data.title;
+                } else {
+                    document.getElementById('title').innerText = "Click below to watch the video";
+                }
+            } catch (err) {
+                document.getElementById('title').innerText = "Click below to watch the video";
+            }
+        }
+
+        function copyCurrentUrl() {
+            navigator.clipboard.writeText(window.location.href);
+            alert("Page link copied to clipboard!");
+        }
+    </script>
 </body>
 </html>
