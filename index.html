@@ -33,7 +33,6 @@
 
         .hidden { display: none !important; }
 
-        /* Generator Styles */
         h1 { font-size: 1.5rem; margin-bottom: 20px; }
         input {
             width: 100%;
@@ -55,9 +54,7 @@
             cursor: pointer;
             width: 100%;
             font-size: 1rem;
-            transition: transform 0.2s;
         }
-        button:active { transform: scale(0.98); }
         
         .result-area {
             margin-top: 20px;
@@ -65,10 +62,8 @@
             background: var(--card);
             border-radius: 8px;
             word-break: break-all;
-            font-size: 0.9rem;
         }
 
-        /* Viewer Styles */
         .thumbnail {
             width: 100%;
             border-radius: 12px;
@@ -82,21 +77,15 @@
             line-height: 1.4;
         }
         .watch-btn {
-            display: inline-block;
+            display: block;
             text-decoration: none;
             background: #ffffff;
             color: #000000;
-            padding: 16px 32px;
+            padding: 18px 32px;
             border-radius: 50px;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 1px;
-            box-shadow: 0 4px 15px rgba(255,255,255,0.2);
-        }
-        .copy-hint {
-            margin-top: 20px;
-            color: var(--secondary);
-            font-size: 0.8rem;
             cursor: pointer;
         }
     </style>
@@ -110,16 +99,16 @@
             <button onclick="generateLink()">Generate Link</button>
             <div id="result" class="result-area hidden">
                 <p>Your Link:</p>
-                <strong id="newUrl"></strong>
-                <p style="font-size: 0.7rem; color: #888; margin-top: 10px;">(Click to copy)</p>
+                <strong id="newUrl" style="cursor:pointer; color: #3ea6ff;"></strong>
+                <p style="font-size: 0.7rem; color: #888; margin-top: 10px;">(Tap link to copy)</p>
             </div>
         </div>
 
         <div id="viewer" class="hidden">
             <img id="thumb" src="" alt="Thumbnail" class="thumbnail">
-            <div id="title" class="video-title">Loading video details...</div>
-            <a id="appLink" href="" class="watch-btn">Watch in YouTube App</a>
-            <div class="copy-hint" onclick="copyCurrentUrl()">Share this page link</div>
+            <div id="title" class="video-title">Loading video...</div>
+            <div id="btnContainer">
+                </div>
         </div>
     </div>
 
@@ -136,7 +125,6 @@
             setupGenerator();
         }
 
-        // --- Generator Logic ---
         function setupGenerator() {
             generatorDiv.classList.remove('hidden');
         }
@@ -145,59 +133,60 @@
             const input = document.getElementById('ytUrl').value;
             const idMatch = input.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
             
-            if (idMatch && idMatch[1]) {
-                const newId = idMatch[1];
-                const cleanBase = window.location.href.split('?')[0];
-                const finalUrl = `${cleanBase}?v=${newId}`;
-                
-                const resultArea = document.getElementById('result');
-                const newUrlElem = document.getElementById('newUrl');
-                
-                resultArea.classList.remove('hidden');
-                newUrlElem.innerText = finalUrl;
-                
-                newUrlElem.onclick = () => {
+            if (idMatch) {
+                const finalUrl = `${window.location.origin}${window.location.pathname}?v=${idMatch[1]}`;
+                document.getElementById('result').classList.remove('hidden');
+                const urlEl = document.getElementById('newUrl');
+                urlEl.innerText = finalUrl;
+                urlEl.onclick = () => {
                     navigator.clipboard.writeText(finalUrl);
-                    alert("Link copied!");
+                    alert("Copied!");
                 };
-            } else {
-                alert("Please enter a valid YouTube URL");
             }
         }
 
-        // --- Viewer Logic ---
         async function setupViewer(id) {
             viewerDiv.classList.remove('hidden');
-            
-            // Set basic info immediately
             const thumbImg = document.getElementById('thumb');
-            const appLink = document.getElementById('appLink');
-            
-            thumbImg.src = `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
-            // Fallback to standard quality if maxres doesn't exist (handled by browser usually, but safe)
-            thumbImg.onerror = () => thumbImg.src = `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
-            
-            const youtubeUrl = `https://www.youtube.com/watch?v=${id}`;
-            appLink.href = youtubeUrl;
+            thumbImg.src = `https://img.youtube.com/vi/${id}/mqdefault.jpg`;
 
-            // Try to fetch title via oEmbed
+            // 1. Fetch Title
             try {
-                const response = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`);
-                if (response.ok) {
-                    const data = await response.json();
-                    document.getElementById('title').innerText = data.title;
-                    document.title = data.title;
-                } else {
-                    document.getElementById('title').innerText = "Click below to watch the video";
-                }
-            } catch (err) {
-                document.getElementById('title').innerText = "Click below to watch the video";
+                const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`);
+                const data = await res.json();
+                document.getElementById('title').innerText = data.title;
+            } catch (e) {
+                document.getElementById('title').innerText = "Tap below to watch";
             }
-        }
 
-        function copyCurrentUrl() {
-            navigator.clipboard.writeText(window.location.href);
-            alert("Page link copied to clipboard!");
+            // 2. Create Deep Link Button
+            const btnContainer = document.getElementById('btnContainer');
+            const btn = document.createElement('a');
+            btn.className = 'watch-btn';
+            btn.innerText = 'Watch in YouTube App';
+            
+            // Logic to break out of Instagram browser
+            const isAndroid = /Android/i.test(navigator.userAgent);
+            const isiOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+            if (isAndroid) {
+                // Android Intent: Forces the specific YouTube package to open
+                btn.href = `intent://www.youtube.com/watch?v=${id}#Intent;package=com.google.android.youtube;scheme=https;end`;
+            } else if (isiOS) {
+                // iOS URI Scheme: Usually triggers the app if installed
+                btn.href = `youtube://www.youtube.com/watch?v=${id}`;
+                // Fallback for iOS if they don't have the app
+                btn.onclick = (e) => {
+                    setTimeout(() => {
+                        window.location.href = `https://www.youtube.com/watch?v=${id}`;
+                    }, 500);
+                };
+            } else {
+                // Desktop/Other
+                btn.href = `https://www.youtube.com/watch?v=${id}`;
+            }
+
+            btnContainer.appendChild(btn);
         }
     </script>
 </body>
