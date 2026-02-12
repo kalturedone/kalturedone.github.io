@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://img.youtube.com">
+    <link rel="preconnect" href="https://i.ytimg.com">
     <title>Video Linker</title>
     <style>
         :root {
@@ -10,7 +12,6 @@
             --card: #1e1e1e;
             --text: #ffffff;
             --accent: #ff0000;
-            --secondary: #aaaaaa;
         }
 
         body {
@@ -25,68 +26,45 @@
             text-align: center;
         }
 
-        .container {
-            width: 90%;
-            max-width: 450px;
-            padding: 20px;
-        }
-
+        .container { width: 90%; max-width: 450px; padding: 20px; }
         .hidden { display: none !important; }
 
-        h1 { font-size: 1.5rem; margin-bottom: 20px; }
-        input {
+        /* Smooth Thumbnail Loading */
+        .thumb-wrapper {
+            position: relative;
             width: 100%;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #333;
-            background: #222;
-            color: white;
-            box-sizing: border-box;
-            margin-bottom: 15px;
-        }
-        button {
-            background-color: var(--accent);
-            color: white;
-            border: none;
-            padding: 14px 24px;
-            border-radius: 50px;
-            font-weight: bold;
-            cursor: pointer;
-            width: 100%;
-            font-size: 1rem;
-        }
-        
-        .result-area {
-            margin-top: 20px;
-            padding: 15px;
-            background: var(--card);
-            border-radius: 8px;
-            word-break: break-all;
+            aspect-ratio: 16 / 9;
+            background: #222; /* Placeholder color */
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
         .thumbnail {
             width: 100%;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            margin-bottom: 20px;
+            height: 100%;
+            object-fit: cover;
+            transition: opacity 0.3s ease-in-out;
         }
-        .video-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 25px;
-            line-height: 1.4;
+
+        /* Generator Styles */
+        input {
+            width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #333;
+            background: #222; color: white; box-sizing: border-box; margin-bottom: 15px;
         }
+        button {
+            background-color: var(--accent); color: white; border: none;
+            padding: 14px 24px; border-radius: 50px; font-weight: bold; width: 100%;
+        }
+        
+        .result-area { margin-top: 20px; padding: 15px; background: var(--card); border-radius: 8px; }
+
+        /* Viewer Styles */
+        .video-title { font-size: 1.2rem; font-weight: 600; margin-bottom: 25px; line-height: 1.4; }
         .watch-btn {
-            display: block;
-            text-decoration: none;
-            background: #ffffff;
-            color: #000000;
-            padding: 18px 32px;
-            border-radius: 50px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            cursor: pointer;
+            display: block; text-decoration: none; background: #ffffff; color: #000000;
+            padding: 18px 32px; border-radius: 50px; font-weight: 800; text-transform: uppercase;
         }
     </style>
 </head>
@@ -94,21 +72,21 @@
 
     <div class="container">
         <div id="generator" class="hidden">
-            <h1>Link Generator</h1>
-            <input type="text" id="ytUrl" placeholder="Paste YouTube URL here...">
+            <h2>Link Generator</h2>
+            <input type="text" id="ytUrl" placeholder="Paste YouTube URL...">
             <button onclick="generateLink()">Generate Link</button>
             <div id="result" class="result-area hidden">
                 <p>Your Link:</p>
                 <strong id="newUrl" style="cursor:pointer; color: #3ea6ff;"></strong>
-                <p style="font-size: 0.7rem; color: #888; margin-top: 10px;">(Tap link to copy)</p>
             </div>
         </div>
 
         <div id="viewer" class="hidden">
-            <img id="thumb" src="" alt="Thumbnail" class="thumbnail">
-            <div id="title" class="video-title">Loading video...</div>
-            <div id="btnContainer">
-                </div>
+            <div class="thumb-wrapper">
+                <img id="thumb" src="" alt="Thumbnail" class="thumbnail" style="opacity: 0;">
+            </div>
+            <div id="title" class="video-title">Loading...</div>
+            <div id="btnContainer"></div>
         </div>
     </div>
 
@@ -116,29 +94,20 @@
         const urlParams = new URLSearchParams(window.location.search);
         const videoId = urlParams.get('v');
 
-        const generatorDiv = document.getElementById('generator');
-        const viewerDiv = document.getElementById('viewer');
-
         if (videoId) {
             setupViewer(videoId);
         } else {
-            setupGenerator();
-        }
-
-        function setupGenerator() {
-            generatorDiv.classList.remove('hidden');
+            document.getElementById('generator').classList.remove('hidden');
         }
 
         function generateLink() {
             const input = document.getElementById('ytUrl').value;
             const idMatch = input.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
-            
             if (idMatch) {
                 const finalUrl = `${window.location.origin}${window.location.pathname}?v=${idMatch[1]}`;
                 document.getElementById('result').classList.remove('hidden');
-                const urlEl = document.getElementById('newUrl');
-                urlEl.innerText = finalUrl;
-                urlEl.onclick = () => {
+                document.getElementById('newUrl').innerText = finalUrl;
+                document.getElementById('newUrl').onclick = () => {
                     navigator.clipboard.writeText(finalUrl);
                     alert("Copied!");
                 };
@@ -146,46 +115,49 @@
         }
 
         async function setupViewer(id) {
-            viewerDiv.classList.remove('hidden');
+            document.getElementById('viewer').classList.remove('hidden');
             const thumbImg = document.getElementById('thumb');
+            
+            // 1. FAST LOAD: Load the "Medium Quality" version immediately (very fast)
             thumbImg.src = `https://img.youtube.com/vi/${id}/mqdefault.jpg`;
+            thumbImg.onload = () => { thumbImg.style.opacity = "1"; };
 
-            // 1. Fetch Title
-            try {
-                const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`);
-                const data = await res.json();
-                document.getElementById('title').innerText = data.title;
-            } catch (e) {
-                document.getElementById('title').innerText = "Tap below to watch";
-            }
+            // 2. BACKGROUND LOAD: Try to upgrade to Max Res without making user wait
+            const maxRes = new Image();
+            maxRes.src = `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
+            maxRes.onload = () => {
+                // If it exists (is wider than 120px), swap it
+                if (maxRes.width > 120) thumbImg.src = maxRes.src;
+            };
 
-            // 2. Create Deep Link Button
+            // 3. TITLE (oEmbed)
+            fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('title').innerText = data.title;
+                    document.title = data.title;
+                })
+                .catch(() => { document.getElementById('title').innerText = "Watch Video"; });
+
+            // 4. BUTTON LOGIC (Same as before for deep linking)
             const btnContainer = document.getElementById('btnContainer');
             const btn = document.createElement('a');
             btn.className = 'watch-btn';
             btn.innerText = 'Watch in YouTube App';
             
-            // Logic to break out of Instagram browser
             const isAndroid = /Android/i.test(navigator.userAgent);
             const isiOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
             if (isAndroid) {
-                // Android Intent: Forces the specific YouTube package to open
                 btn.href = `intent://www.youtube.com/watch?v=${id}#Intent;package=com.google.android.youtube;scheme=https;end`;
             } else if (isiOS) {
-                // iOS URI Scheme: Usually triggers the app if installed
                 btn.href = `youtube://www.youtube.com/watch?v=${id}`;
-                // Fallback for iOS if they don't have the app
-                btn.onclick = (e) => {
-                    setTimeout(() => {
-                        window.location.href = `https://www.youtube.com/watch?v=${id}`;
-                    }, 500);
+                btn.onclick = () => {
+                    setTimeout(() => { window.location.href = `https://www.youtube.com/watch?v=${id}`; }, 500);
                 };
             } else {
-                // Desktop/Other
                 btn.href = `https://www.youtube.com/watch?v=${id}`;
             }
-
             btnContainer.appendChild(btn);
         }
     </script>
