@@ -16,7 +16,6 @@
     <style>
         :root {
             --bg: #0f0f0f;
-            --surface: #1a1a1a;
             --text: #ffffff;
             --text-dim: #aaaaaa;
             --yt-red: #FF0000;
@@ -57,12 +56,10 @@
             width: 100%;
         }
 
-        /* Mobile Scale-Up */
         @media (max-width: 480px) {
             .container { justify-content: flex-start; padding-top: 10vh; }
             h1 { font-size: 2rem !important; }
             .btn { padding: 20px !important; font-size: 1.2rem !important; }
-            input { font-size: 1.1rem !important; padding: 18px !important; }
         }
 
         .hidden { display: none !important; }
@@ -123,7 +120,7 @@
             <div class="thumb-wrapper">
                 <img id="thumb" src="" class="thumbnail" style="opacity: 0;">
             </div>
-            <div id="title" class="video-title">Loading...</div>
+            <div id="title" class="video-title">Loading video details...</div>
             <div id="btnContainer"></div>
         </div>
     </div>
@@ -147,8 +144,6 @@
                 const finalUrl = `${window.location.origin}${window.location.pathname}?v=${match[1]}`;
                 document.getElementById('result').classList.remove('hidden');
                 document.getElementById('newUrl').innerText = finalUrl;
-                
-                // Track generation event
                 gtag('event', 'generate_link', { 'video_id': match[1] });
             }
         }
@@ -164,23 +159,29 @@
             document.getElementById('viewer').classList.remove('hidden');
             const thumb = document.getElementById('thumb');
             
-            // Image Loading
+            // Fix 1: Instant low-res thumbnail load
             thumb.src = `https://img.youtube.com/vi/${id}/mqdefault.jpg`;
-            thumb.onload = () => thumb.style.opacity = "1";
-            const max = new Image();
-            max.src = `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
-            maxRes.onload = () => { if(max.width > 120) thumb.src = max.src; };
+            thumb.onload = () => { thumb.style.opacity = "1"; };
 
-            // Get Metadata
+            // Fix 2: Better Max-Res loading (No hang)
+            const maxPhoto = new Image();
+            maxPhoto.src = `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
+            maxPhoto.onload = () => { if(maxPhoto.width > 120) thumb.src = maxPhoto.src; };
+
+            // Metadata & Button Logic (Now outside the image load to prevent delay)
             fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`)
                 .then(r => r.json())
                 .then(d => { 
                     document.getElementById('title').innerText = d.title;
-                    // Track Page View with Title
+                    document.title = d.title;
                     gtag('event', 'view_video_page', { 'video_title': d.title, 'video_id': id });
+                })
+                .catch(() => {
+                    document.getElementById('title').innerText = "Watch Video";
                 });
 
-            // Button & Deep Linking
+            const btnContainer = document.getElementById('btnContainer');
+            btnContainer.innerHTML = ''; // Clear just in case
             const btn = document.createElement('a');
             btn.className = 'btn btn-outline';
             btn.innerText = 'WATCH IN YOUTUBE APP';
@@ -197,15 +198,11 @@
                 btn.href = `https://www.youtube.com/watch?v=${id}`;
             }
 
-            // TRACKING THE BUTTON CLICK
             btn.addEventListener('click', () => {
-                gtag('event', 'click_watch_button', {
-                    'video_id': id,
-                    'device': isAndroid ? 'Android' : isiOS ? 'iOS' : 'Desktop'
-                });
+                gtag('event', 'click_watch_button', { 'video_id': id });
             });
 
-            document.getElementById('btnContainer').appendChild(btn);
+            btnContainer.appendChild(btn);
         }
     </script>
 </body>
